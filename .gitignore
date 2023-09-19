@@ -6,6 +6,7 @@
 /.vscode
 atlassian*
 /nbproject
+/magento/
 /magento/robots.txt
 /magento/pub/robots.txt
 /magento/sitemap

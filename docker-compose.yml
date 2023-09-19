@@ -16,13 +16,13 @@ services:
   nginx:
     image: nginx:latest
     healthcheck:
-      test: 'curl --fail 127.0.0.1:80'
+      test: 'curl --fail 127.0.0.1:8080'
     depends_on:
       php:
         condition: service_started
     ports:
-      - 80:80
-      - 443:443
+      - 8080:8080
+      - 8443:8443
     links:
       - db
       - php
