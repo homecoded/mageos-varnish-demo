@@ -1,0 +1,133 @@
+version: "3.7"
+
+services:
+  elasticsearch:
+    image: elasticsearch:${ELASTICSEARCH_VERSION:-8.8.1}
+    environment:
+      - discovery.type=single-node
+      #- cluster.name=docker-cluster
+      #- bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+  nginx:
+    image: nginx:latest
+    healthcheck:
+      test: 'curl --fail 127.0.0.1:80'
+    depends_on:
+      php:
+        condition: service_started
+    ports:
+      - 80:80
+      - 443:443
+    links:
+      - db
+      - php
+    environment:
+      MAGE_RUN_TYPE: ${MAGE_RUN_TYPE:-}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-2G}
+    volumes:
+      - ${MAGENTO_PATH}:/var/www/html/:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${NGINX_MAGENTO_CONFIG:-./nginx/magento.conf.template}:/etc/nginx/templates/magento/magento.conf.template:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - php_socket:/var/run/php
+
+  php: &php
+    image: kingfisherdirect/magento2-php:6-dev
+    env_file:
+      - ${MAGENTO_ENV_FILE:-default.env}
+    environment: &php-environment
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-2G}
+      PHP_DATE_TIMEZONE: ${PHP_DATE_TIMEZONE:-GMT}
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
+      XDEBUG_CONFIG: ${XDEBUG_CONFIG:-}
+      XDEBUG_START_WITH_REQUEST: ${XDEBUG_START_WITH_REQUEST:-default}
+      MAGE_DEPLOY__SKIP_SETUP: "true"
+    links:
+      - db
+      - cache
+      - elasticsearch
+      - mailcatcher
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${MAGENTO_PATH}:/var/www/html:delegated
+      - ~/.config/composer:/home/app/.composer:delegated
+      - ~/.config/composer:/var/www/html/var/composer_home:delegated
+      - ./php/magento_dev.ini:/usr/local/etc/php/conf.d/magento_dev.ini:ro
+      - ./php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini:ro
+      - ./php/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf:ro
+      - ./ssmtp/ssmtp.conf:/etc/ssmtp/ssmtp.conf
+      - php_socket:/var/run/php:cached
+      - mariadb_socket:/var/run/mysqld:cached
+
+  php_cron:
+    <<: *php
+    command: sh -c 'bin/magento cron:run; sleep 60;'
+    restart: unless-stopped
+    environment:
+      <<: *php-environment
+      PHP_MEMORY_LIMIT: ${CRON_PHP_MEMORY_LIMIT:-765M}
+      XDEBUG_MODE: ${CRON_XDEBUG_MODE:-off}
+      XDEBUG_CONFIG: ${CRON_XDEBUG_CONFIG:-}
+
+  db:
+    image: mariadb:10.6
+    command:
+      --max_allowed_packet=64M
+      --optimizer_use_condition_selectivity=1
+      --optimizer_switch="rowid_filter=off"
+    environment:
+      MYSQL_ROOT_PASSWORD: magento2
+      MYSQL_DATABASE: magento
+      MYSQL_USER: magento
+      MYSQL_PASSWORD: magento2
+    healthcheck:
+      test: 'mysqladmin ping -h localhost -u root -pmagento2'
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "${MARIADB_EXPOSED_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - mariadb_socket:/var/run/mysqld
+
+  cache:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: 'redis-cli ping || exit 1'
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - 1080
+    healthcheck:
+      test: 'wget --no-verbose --tries=1 --spider 127.0.0.1:1080 || exit 1'
+
+volumes:
+  mariadb_data:
+
+  php_socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  mariadb_socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  redis_data:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs

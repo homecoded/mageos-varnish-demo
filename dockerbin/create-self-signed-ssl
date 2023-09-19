@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+echo -e "🔐 Generating ssl keys\n"
+
+mkdir -p nginx/ssl
+chmod 700 nginx/ssl
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout nginx/ssl/nginx.key -out nginx/ssl/nginx.crt
+
+chmod 600 nginx/ssl/*
+
+echo -e "\n\n👌 All done"

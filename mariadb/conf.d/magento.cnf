@@ -1,0 +1,6 @@
+[mariadb]
+optimizer_switch='rowid_filter=off'
+optimizer_use_condition_selectivity = 1
+
+[mysqld]
+max_allowed_packet=64M
