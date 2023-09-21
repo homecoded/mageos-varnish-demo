@@ -35,9 +35,6 @@ docker-compose exec -w /var/www/html php bin/magento setup:install \
 docker-compose exec -w /var/www/html php mkdir sampledata
 docker-compose exec -w /var/www/html/sampledata php git clone https://github.com/mage-os/mageos-magento2-sample-data.git .
 docker-compose exec -w /var/www/html/sampledata php php -f dev/tools/build-sample-data.php -- --ce-source="/var/www/html/"
-
-
-
 docker-compose exec -w /var/www/html php bin/magento deploy:mode:set developer
 docker-compose exec -w /var/www/html php bin/magento setup:upgrade
 docker-compose exec -w /var/www/html php rm -rf generated/code/* generated/metadata/*

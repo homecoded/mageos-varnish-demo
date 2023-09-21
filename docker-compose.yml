@@ -5,8 +5,6 @@ services:
     image: elasticsearch:${ELASTICSEARCH_VERSION:-8.8.1}
     environment:
       - discovery.type=single-node
-      #- cluster.name=docker-cluster
-      #- bootstrap.memory_lock=true
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
@@ -23,6 +21,8 @@ services:
     ports:
       - 8080:8080
       - 8443:8443
+      - 80
+      - 443
     links:
       - db
       - php
@@ -49,6 +49,9 @@ services:
       XDEBUG_CONFIG: ${XDEBUG_CONFIG:-}
       XDEBUG_START_WITH_REQUEST: ${XDEBUG_START_WITH_REQUEST:-default}
       MAGE_DEPLOY__SKIP_SETUP: "true"
+    ports:
+      - 80:80
+      - 443:443
     links:
       - db
       - cache
@@ -76,6 +79,9 @@ services:
       PHP_MEMORY_LIMIT: ${CRON_PHP_MEMORY_LIMIT:-765M}
       XDEBUG_MODE: ${CRON_XDEBUG_MODE:-off}
       XDEBUG_CONFIG: ${CRON_XDEBUG_CONFIG:-}
+    ports:
+      - 80
+      - 443
 
   db:
     image: mariadb:10.6
