@@ -19,7 +19,7 @@ Run the following commands
     docker-compose up
     ./setup-magento.sh
 
-After a few minutes, you will have a working Magento installation running on http://localhost/
+After a few minutes, you will have a working Magento installation running on http://localhost:8080/
 
 # Useful Info About Magento 2
 
@@ -31,6 +31,10 @@ Here is the admin URL and the corresponding access credentials.
     User: admin
     Pasword: easy123
 
+In case the admin login does not work, you can create a new admin account by calling
+
+    docker-compose exec -w /var/www/html php bin/magento admin:user:creat
+
 ## Accessing The Database
 
 Use this command outside the docker container to get a mysql shell.
@@ -38,6 +42,19 @@ Use this command outside the docker container to get a mysql shell.
     docker-compose exec db mysql -u magento -pmagento2 magento
 
 ## Accessing The PHP instance shell
+
+Find out how the web container is called:
+
+    docker ps | grep php | rev | cut -d ' ' -f1 | rev
+
+This will give you a list with all php containers. The one you're interested in is the one NOT having "cron" in the 
+name. Depending on your docker and/or OS setup the names you want to find will be something like
+
+- varnished_magento_php_1
+- varnished_magento-php-1
+
+I'm using "varnished_magento_php_1" for the following examples. If your name differs, please adjust the commands
+accordingly.
 
 If you need to access the shell on the web server:
 
@@ -72,24 +89,35 @@ Next step, we go into the backend
 Navigate to *Stores -> Configuration -> Advanced -> System -> Full Page Cache*. Switch "Caching Application" to 
 "Varnish Cache". Click "Save Config".
 
-Or do it on the command line:
+Under *Stores -> Configuration -> Advanced -> System -> Full Page Cache -> Varnish Configuration -> Export configuration*
+you need to create a varnish config. Click on "Export VCL for Varnish 6". Store it on your computer.
+
+Copy the file into the container 
+
+    docker cp <vcls-file> varnished_magento_php_1:/etc/varnish/default.vcl
+
+Then navigate to *Stores -> Configuration -> General -> Web -> Base URLs* and change the Base URL to "http://localhost/".
+
+Or do it all on the command line:
 
     bin/magento config:set --scope=default --scope-code=0 system/full_page_cache/caching_application 2
 
     # generate varnish config
     bin/magento varnish:vcl:generate --export-version=6 > /etc/varnish/default.vcl
-    sed -i 's/localhost/nginx/g' /etc/varnish/default.vcl
-
-    # enable developer mode
-    bin/magento deploy:mode:set developer
-
+    
     # switch base url to varnish
     bin/magento config:set web/unsecure/base_url http://localhost/
-    bin/magento config:set web/secure/base_url https://localhost/
     bin/magento cache:flush
     
     # make sure the rights are correct (we ran bin/magento with root!)
     chown -R app:app /var/www/html
+
+### Starting varnish
+
+First, let's make it a little more interesting
+
+    # introduce an error into varnish config
+    sed -i 's/localhost/nginx/g' /etc/varnish/default.vcl
 
 Start varnish
 
@@ -103,12 +131,15 @@ Start varnish
     
 # Debugging varnish
 
-For the next step you need two open shells, one root and one app shell
+For the next step you need to open two shells, one root and one app shell
     
     # open root shell
     docker exec -u root -it varnished_magento_php_1 /bin/bash
     # start varnish log
     varnishlog
+
+Visit http://localhost/ in your browser and see the website served by varnish.
+If everything works, you should see entries appearing in the Varnish-Log.
 
     # open app shell
     docker exec -it varnished_magento_php_1 /bin/bash
@@ -154,8 +185,6 @@ Now, restart varnish
 
 Open another root-shell and start varnishlog. Then, call "cache:flush" from the app shell and see, that the purge
 request passes sucessfully.
-
-Visit http://localhost/ in your browser and see the website served by varnish.
 
 # In case of emergency
 

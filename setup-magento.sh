@@ -18,7 +18,7 @@ docker-compose exec -w /var/www/html php bin/magento setup:install \
     --timezone="Europe/Berlin" \
     --currency=EUR \
     --base-url=http://localhost:8080/ \
-    --base-url-secure=https://localhost:8443/ \
+    --base-url-secure=http://localhost:8080/ \
     --use-rewrites=1 \
     --use-secure=1 \
     --use-secure-admin=1 \
@@ -32,6 +32,8 @@ docker-compose exec -w /var/www/html php bin/magento setup:install \
     --elasticsearch-port=9200 \
     --elasticsearch-index-prefix=magento2 \
     --elasticsearch-timeout=15
+
+docker-compose exec -w /var/www/html php bin/magento config:set 'web/secure/use_in_adminhtml' 0
 docker-compose exec -w /var/www/html php mkdir sampledata
 docker-compose exec -w /var/www/html/sampledata php git clone https://github.com/mage-os/mageos-magento2-sample-data.git .
 docker-compose exec -w /var/www/html/sampledata php php -f dev/tools/build-sample-data.php -- --ce-source="/var/www/html/"
@@ -39,3 +41,4 @@ docker-compose exec -w /var/www/html php bin/magento deploy:mode:set developer
 docker-compose exec -w /var/www/html php bin/magento setup:upgrade
 docker-compose exec -w /var/www/html php rm -rf generated/code/* generated/metadata/*
 docker-compose exec -w /var/www/html php bin/magento sampledata:deploy
+docker-compose exec -w /var/www/html php bin/magento maintenance:disable
