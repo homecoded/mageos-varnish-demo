@@ -18,10 +18,9 @@ docker-compose exec -w /var/www/html php bin/magento setup:install \
     --timezone="Europe/Berlin" \
     --currency=EUR \
     --base-url=http://localhost:8080/ \
-    --base-url-secure=http://localhost:8080/ \
     --use-rewrites=1 \
-    --use-secure=1 \
-    --use-secure-admin=1 \
+    --use-secure=0 \
+    --use-secure-admin=0 \
     --admin-user=admin \
     --admin-password=easy123 \
     --admin-firstname=Admin \

@@ -33,7 +33,7 @@ Here is the admin URL and the corresponding access credentials.
 
 In case the admin login does not work, you can create a new admin account by calling
 
-    docker-compose exec -w /var/www/html php bin/magento admin:user:creat
+    docker-compose exec -w /var/www/html php bin/magento admin:user:create
 
 ## Accessing The Database
 
@@ -45,10 +45,10 @@ Use this command outside the docker container to get a mysql shell.
 
 Find out how the web container is called:
 
-    docker ps | grep php | rev | cut -d ' ' -f1 | rev
+    docker ps | grep php | rev | cut -d ' ' -f1 | rev | grep -v "cron"
 
 This will give you a list with all php containers. The one you're interested in is the one NOT having "cron" in the 
-name. Depending on your docker and/or OS setup the names you want to find will be something like
+name. Depending on your docker and/or OS-setup the names you want to find will be something like
 
 - varnished_magento_php_1
 - varnished_magento-php-1
